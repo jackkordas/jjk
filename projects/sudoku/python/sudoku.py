@@ -95,6 +95,27 @@ class sudoku:
             values.append(row[col])
         return self.check_values(values)
 
+    def row_values(self, row):
+        return [cell.value for cell in self.cells[row]]
+
+    def col_values(self, col):
+        values = []
+        for row in self.cells:
+            values.append(row[col].value)
+        return values
+
+    def box_values(self, row, col):
+        start_row = row / 3 * 3
+        start_col = col / 3 * 3
+
+        values = []
+        for row in range(0,3):
+            for col in range(0,3):
+                values.append(
+                        self.cells[start_row + row][start_col + col].value)
+        return values
+
+
     def check_box(self, box):
         '''
         0 --> (0,0), (0,1), (0,2)
@@ -135,5 +156,15 @@ class sudoku:
         if solved:
             return puzzle
 
+        return None
+
+    def solve_logical(self):
+        for row in range(0,9):
+            for col in range(0,9):
+                offset = row*9 + col
+                r = set(self.row_values(row))
+                c = set(self.col_values(col))
+                b = set(self.box_values(row, col))
+                all = r | c | b
         return None
             
