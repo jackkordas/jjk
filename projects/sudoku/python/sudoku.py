@@ -96,12 +96,13 @@ class sudoku:
         return self.check_values(values)
 
     def row_values(self, row):
-        return [cell.value for cell in self.cells[row]]
+        return [cell.value for cell in self.cells[row] if cell.value is not None]
 
     def col_values(self, col):
         values = []
         for row in self.cells:
-            values.append(row[col].value)
+            if row[col].value:
+                values.append(row[col].value)
         return values
 
     def box_values(self, row, col):
@@ -111,8 +112,9 @@ class sudoku:
         values = []
         for row in range(0,3):
             for col in range(0,3):
-                values.append(
-                        self.cells[start_row + row][start_col + col].value)
+                cell = self.cells[start_row + row][start_col + col]
+                if cell.value:
+                    values.append(cell.value)
         return values
 
 
@@ -158,13 +160,37 @@ class sudoku:
 
         return None
 
+    full = set([1,2,3,4,5,6,7,8,9])
+
     def solve_logical(self):
-        for row in range(0,9):
-            for col in range(0,9):
-                offset = row*9 + col
-                r = set(self.row_values(row))
-                c = set(self.col_values(col))
-                b = set(self.box_values(row, col))
-                all = r | c | b
-        return None
+        unsolved = True
+        choice_made = True
+        while unsolved and choice_made:
+            unsolved = False
+            choice_made = False
+            lens = []
+            for row in range(0,9):
+                for col in range(0,9):
+                    if self.cells[row][col].value: continue
+                    unsolved = True
+                    offset = row*9 + col
+                    r = set(self.row_values(row))
+                    c = set(self.col_values(col))
+                    b = set(self.box_values(row, col))
+                    all = r | c | b
+                    lens.append((row, col, len(all)))
+                    print "row %d col %d len %d" % (row, col, len(all))
+                    if len(all) == 8:
+                        tmp = self.full - all
+                        assert len(tmp) == 1
+                        choice = tmp.pop()
+                        print "(%d,%d) choose %d" % (row, col, choice)
+                        self.cells[row][col].value = choice
+                        choice_made = True
+        if unsolved:
+            for cell_len in lens:
+                #import pdb; pdb.set_trace()
+                #print 'foo'
+                print "(%d, %d): %d" % (cell_len[0], cell_len[1], cell_len[2])
+        return self
             

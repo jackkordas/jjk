@@ -31,6 +31,7 @@ def test_logical():
     p = sudoku(inputfile=f)
     s = p.solve_logical()
     soln = sudoku(inputfile=open('soln1'))
+    print soln
     eq_(s, soln)
 
 @raises(IllegalPuzzleError)
