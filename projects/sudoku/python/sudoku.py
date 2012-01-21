@@ -1,5 +1,6 @@
 import copy
 
+
 class Cell:
 
     def __init__(self, value):
@@ -45,6 +46,35 @@ class sudoku:
             self.cells = copy.deepcopy(puzzle.cells)
 
         self.check_legal()
+        self.solved = False #XXX
+        self.init_combination_map()
+
+    def init_combination_map(self):
+        """ assume we need at most 6 """
+        map = []
+        num_values = 6
+        for i in range(num_values):
+            for j in range(i+1, num_values):
+                map.append((j, [i,j]))
+
+        found = True
+        next_start = 0
+        while found:
+            found = False
+            this_start = next_start
+            next_start = len(map)
+            for (index, values) in map[this_start:]:
+                i = index + 1
+                while i < num_values:
+                    new_values = values[:]
+                    new_values.append(i)
+                    map.append((i, new_values))
+                    found = True
+                    i += 1
+        self._combination_map = map
+        print 'combination map'
+        for (index, values) in map:
+            print index, values
 
     def __eq__(self, other):
         if type(other) != type(self): return False
@@ -65,7 +95,10 @@ class sudoku:
         assert self.cells
         for row in self.cells:
             for cell in row:
-                tmp += '%s, ' % cell.value
+                if cell.value:
+                    tmp += '%s, ' % cell.value
+                else:
+                    tmp += '(' + '|'.join([str(v) for v in cell.valid_values]) + '), '
             tmp += '\n'
         return tmp
 
@@ -104,6 +137,9 @@ class sudoku:
             if row[col].value:
                 values.append(row[col].value)
         return values
+
+    def col_cells(self, col):
+        return [row[col] for row in self.cells]
 
     def box_values(self, row, col):
         start_row = row / 3 * 3
@@ -162,7 +198,84 @@ class sudoku:
 
     full = set([1,2,3,4,5,6,7,8,9])
 
+    def init_valid_values(self):
+        changed = False
+        for row in range(0,9):
+            for col in range(0,9):
+                if self.cells[row][col].value: continue
+                r = set(self.row_values(row))
+                c = set(self.col_values(col))
+                b = set(self.box_values(row, col))
+                all_used = r | c | b
+                valid = self.full - all_used
+                if len(valid) == 1:
+                    self.cells[row][col].value = valid.pop()
+                    self.cells[row][col].valid_values = None
+                    changed = True
+                else:
+                    self.cells[row][col].valid_values = valid
+
+        return changed
+
+    def get_reduction_combos(self, members):
+        # XXX - should use a map here that is generated once and used repeatedly
+        combos = []
+        num_members = len(members)
+        for (index, values) in self._combination_map:
+            if index >= num_members:  
+                continue
+            entry = [members[i] for i in values]
+            combos.append(entry)
+
+        return combos
+
+
+    def reduce(self, cells, exclusive_set, owning_indices):
+        for index in range(9):
+            if cells[index].value: continue
+            if index in owning_indices: continue
+            if len(cells[index].valid_values.intersection(exclusive_set)) > 0:
+                print 'winner, winner, chicken dinner'
+
+    def try_reduce(self):
+        for col in range(9):
+            cells = self.col_cells(col)
+            undecided_indices = []
+            for index in range(9):
+                if not cells[index].value:
+                    undecided_indices.append(index)
+            reduction_combinations = self.get_reduction_combos(
+                                                        undecided_indices)
+            for reduction in reduction_combinations:
+                s = set()
+                for index in reduction:
+                    s = s.union(cells[index].valid_values)
+                if len(s) == len(reduction):
+                    print 'found reduction for col %d, ' % col, reduction
+                    self.reduce(cells, s, reduction)
+            print 'column ', col
+            print 'combos ', reduction_combinations
+        for row in range(9):
+            pass
+        for box in range(9):
+            pass
+
+        return False
+
     def solve_logical(self):
+        while not self.solved:
+            changed = self.init_valid_values()
+            print self
+            if changed:
+                continue
+            changed = self.try_reduce()
+            if changed:
+                continue
+            import pdb; pdb.set_trace()
+        print 'logical solution'
+        print self
+
+    def solve_logicalxxx(self):
         unsolved = True
         choice_made = True
         while unsolved and choice_made:
@@ -173,7 +286,6 @@ class sudoku:
                 for col in range(0,9):
                     if self.cells[row][col].value: continue
                     unsolved = True
-                    offset = row*9 + col
                     r = set(self.row_values(row))
                     c = set(self.col_values(col))
                     b = set(self.box_values(row, col))
